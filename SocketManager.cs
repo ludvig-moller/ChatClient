@@ -10,48 +10,27 @@
             Path = _path 
         });
 
-        private static string? _current_room;
-
         public static async Task Connect()
         {
-            _client.OnConnected += (sender, args) =>
-            {
-                Console.WriteLine("Connected");
-            };
+            _client.OnConnected += (sender, args) 
+                => Console.WriteLine("Connected to the server!");
 
-            _client.OnDisconnected += (sender, args) =>
-            {
-                Console.WriteLine("Disconnected");
-            };
+            _client.OnDisconnected += (sender, args) 
+                => Console.WriteLine("Disconnected from the server!");
 
             await _client.ConnectAsync();
         }
 
-        public static async Task SendMessage(Message message, string? username = null)
-        {
-            var target = username ?? _current_room;
-            if (target == null)
-                return;
+        public static async Task Disconnect()
+            => await _client.DisconnectAsync();
 
-            await _client.EmitAsync($"{_eventBase}_{target}_message", message);
-        }
+        public static async Task SendMessage(Message message, string target)
+            => await _client.EmitAsync($"{_eventBase}_{target}_message", message);
 
         public static async Task JoinRoom(string room, string username)
-        {
-            if (_current_room == room) 
-                return;
-            _current_room = room;
+            => await _client.EmitAsync($"{_eventBase}_{room}_join", username);
 
-            await _client.EmitAsync($"{_eventBase}_{_current_room}_join", username);
-        }
-
-        public static async Task LeaveRoom(string username)
-        {
-            if (_current_room == null) 
-                return;
-
-            await _client.EmitAsync($"{_eventBase}_{_current_room}_leave", username);
-            _current_room = null;
-        }
+        public static async Task LeaveRoom(string room, string username)
+            => await _client.EmitAsync($"{_eventBase}_{room}_leave", username);
     }
 }

@@ -2,9 +2,9 @@
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main()
         {
-            Console.WriteLine("Hello, World!");
+            await Chat.Start();
         }
     }
 }

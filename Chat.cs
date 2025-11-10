@@ -11,7 +11,7 @@
         {
             _username = GetUsername();
 
-            await SocketManager.Connect();
+            await SocketManager.Connect(_username);
             await SocketManager.JoinRoom(_currentRoom, _username);
             await Run();
         }
@@ -20,6 +20,7 @@
         {
             while (_isRuinning)
             {
+                Console.Write($"Message in {_currentRoom}: ");
                 var input = Console.ReadLine();
 
                 if (input == null)
@@ -49,7 +50,15 @@
         public static void AddMessage(Message message)
         {
             _messages.Add(message);
-            Console.WriteLine(message);
+            OutputMessages();
+        }
+
+        private static void OutputMessages()
+        {
+            Console.Clear();
+
+            foreach (var message in _messages)
+                Console.WriteLine($"{message.Date.ToLocalTime().ToShortTimeString()} {message.Username}: {message.Text}");
         }
 
         private static string GetUsername()
@@ -58,16 +67,28 @@
 
             while (username == string.Empty)
             {
+                Console.Write("Enter your username: ");
                 var input = Console.ReadLine();
+
                 if (string.IsNullOrEmpty(input))
                 {
-                    Console.WriteLine("Username can't be empty.");
+                    AddMessage(
+                        new Message 
+                        { 
+                            Text = "Username can't be empty. Try again.", 
+                            Username = "System" 
+                        });
                     continue;
                 }
 
                 if (input.Any(char.IsWhiteSpace))
                 {
-                    Console.WriteLine("Username can't have any whitespace.");
+                    AddMessage(
+                        new Message 
+                        { 
+                            Text = "Username can't have any whitespace. Try again.", 
+                            Username = "System" 
+                        });
                     continue;
                 }
 

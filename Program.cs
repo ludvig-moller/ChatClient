@@ -1,6 +1,6 @@
 ﻿namespace ChatClient
 {
-    internal class Program
+    public class Program
     {
         static async Task Main()
         {

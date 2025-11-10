@@ -7,6 +7,9 @@
         private static string _currentRoom = "general";
         private static readonly List<Message> _messages = new();
 
+        private static string _currentPrompt = string.Empty;
+        private static string _currentInput = string.Empty;
+
         public static async Task Start()
         {
             _username = GetUsername();
@@ -20,8 +23,7 @@
         {
             while (_isRuinning)
             {
-                Console.Write($"Message in {_currentRoom}: ");
-                var input = Console.ReadLine();
+                var input = GetInput($"Message in {_currentRoom}: ");
 
                 if (input == null)
                     continue;
@@ -59,6 +61,39 @@
 
             foreach (var message in _messages)
                 Console.WriteLine($"{message.Date.ToLocalTime().ToShortTimeString()} {message.Username}: {message.Text}");
+
+            Console.Write(_currentPrompt);
+            Console.Write(_currentInput);
+        }
+
+        private static string GetInput(string prompt)
+        {
+            Console.Write(prompt);
+            _currentPrompt = prompt;
+
+            ConsoleKeyInfo inputKey = new();
+            while (inputKey.Key != ConsoleKey.Enter || _currentInput == string.Empty)
+            {
+                OutputMessages();
+
+                inputKey = Console.ReadKey();
+
+                if (inputKey.Key == ConsoleKey.Enter)
+                    continue;
+
+                if (inputKey.Key == ConsoleKey.Backspace)
+                    _currentInput = _currentInput.Length > 0 
+                        ? _currentInput.Remove(_currentInput.Length - 1) 
+                        : _currentInput;
+                else
+                    _currentInput += inputKey.KeyChar;
+            }
+
+            var newInput = _currentInput;
+            _currentInput = string.Empty;
+            _currentPrompt = string.Empty;
+
+            return newInput;
         }
 
         private static string GetUsername()
@@ -67,19 +102,7 @@
 
             while (username == string.Empty)
             {
-                Console.Write("Enter your username: ");
-                var input = Console.ReadLine();
-
-                if (string.IsNullOrEmpty(input))
-                {
-                    AddMessage(
-                        new Message 
-                        { 
-                            Text = "Username can't be empty. Try again.", 
-                            Username = "System" 
-                        });
-                    continue;
-                }
+                var input = GetInput("Enter your username: ");
 
                 if (input.Any(char.IsWhiteSpace))
                 {

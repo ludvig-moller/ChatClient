@@ -1,4 +1,5 @@
 ﻿using SocketIOClient;
+using System.Text.Json;
 
 namespace ChatClient
 {
@@ -14,13 +15,14 @@ namespace ChatClient
 
         public static async Task Connect(string username)
         {
-            _client.OnConnected += (sender, args) 
-                => Console.WriteLine("Connected to the server!");
+            _client.OnConnected += (sender, args)
+                => Chat.AddMessage(new SystemMessage("Connected to the server."));
 
             _client.OnDisconnected += (sender, args) 
-                => Console.WriteLine("Disconnected from the server!");
+                => Chat.AddMessage(new SystemMessage("Disconnected from the server."));
 
-            _client.On($"{_eventBase}_{username.ToLower()}_message", OnMessage);
+            _client.On($"{_eventBase}_{username.ToLower()}_message", response 
+                => OnDirectMessage(username, response));
 
             await _client.ConnectAsync();
 
@@ -35,9 +37,12 @@ namespace ChatClient
 
         public static async Task JoinRoom(string room, string username)
         {
-            _client.On($"{_eventBase}_{room}_join", OnJoin);
-            _client.On($"{_eventBase}_{room}_leave", OnLeave);
-            _client.On($"{_eventBase}_{room}_message", OnMessage);
+            _client.On($"{_eventBase}_{room}_join", response 
+                => OnJoin(room, response));
+            _client.On($"{_eventBase}_{room}_leave", response 
+                => OnLeave(room, response));
+            _client.On($"{_eventBase}_{room}_message", response 
+                => OnRoomMessage(room, response));
 
             await _client.EmitAsync($"{_eventBase}_{room}_join", username);
         }
@@ -51,32 +56,68 @@ namespace ChatClient
             await _client.EmitAsync($"{_eventBase}_{room}_leave", username); 
         }
 
-        private static void OnMessage(SocketIOResponse response)
+        private static void OnRoomMessage(string room, SocketIOResponse response)
         {
             try
             {
-                var message = response.GetValue<Message>();
-                Chat.AddMessage(message);
+                var json = response.GetValue<JsonElement>();
+                string? sender = json.TryGetProperty("Sender", out JsonElement jsonSender) 
+                    ? jsonSender.ToString() 
+                    : null;
+                string? text = json.TryGetProperty("Text", out JsonElement jsonText)
+                    ? jsonText.ToString()
+                    : null;
+                DateTime? date = json.TryGetProperty("Date", out JsonElement jsonDate)
+                    ? date = jsonDate.GetDateTime()
+                    : null;
+
+                if (sender == null || text == null)
+                    throw new Exception();
+                
+                Chat.AddMessage(new RoomMessage(room, sender, text, date));
             }
-            catch 
+            catch
             {
-                var message = new Message { Text = "Recived invaild message.", Username = "System" };
-                Chat.AddMessage(message);
+                Chat.AddMessage(new ErrorMessage("Recived invaild message."));
             }
         }
 
-        private static void OnJoin(SocketIOResponse response)
+        private static void OnDirectMessage(string receiver, SocketIOResponse response)
         {
-            var username = response.GetValue<string>();
-            var message = new Message { Text = $"{username} joined the room.", Username = "System" };
-            Chat.AddMessage(message);
+            try
+            {
+                var json = response.GetValue<JsonElement>();
+                string? sender = json.TryGetProperty("Sender", out JsonElement jsonSender)
+                    ? jsonSender.ToString()
+                    : null;
+                string? text = json.TryGetProperty("Text", out JsonElement jsonText)
+                    ? jsonText.ToString()
+                    : null;
+                DateTime? date = json.TryGetProperty("Date", out JsonElement jsonDate)
+                    ? date = jsonDate.GetDateTime()
+                    : null;
+
+                if (sender == null || text == null)
+                    throw new Exception();
+
+                Chat.AddMessage(new DirectMessage(receiver, sender, text, date));
+            }
+            catch
+            {
+                Chat.AddMessage(new ErrorMessage("Recived invaild message."));
+            }
         }
 
-        private static void OnLeave(SocketIOResponse response)
+        private static void OnJoin(string room, SocketIOResponse response)
         {
             var username = response.GetValue<string>();
-            var message = new Message { Text = $"{username} left the room.", Username = "System" };
-            Chat.AddMessage(message);
+            Chat.AddMessage(new JoinRoomMessage(room, username));
+        }
+
+        private static void OnLeave(string room, SocketIOResponse response)
+        {
+            var username = response.GetValue<string>();
+            Chat.AddMessage(new LeaveRoomMessage(room, username));
         }
     }
 }

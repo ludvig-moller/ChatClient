@@ -38,11 +38,11 @@
 
                 if (_currentRoom == null)
                 {
-                    Console.WriteLine("Can't send message without joining a room.");
+                    AddMessage(new ErrorMessage("Can't send messages without joining a room."));
                     continue;
                 }
 
-                var message = new Message { Text = input, Username = _username };
+                var message = new RoomMessage(_currentRoom, _username, input);
 
                 AddMessage(message);
                 await SocketManager.SendMessage(message, _currentRoom);
@@ -60,15 +60,29 @@
             Console.Clear();
 
             foreach (var message in _messages)
-                Console.WriteLine($"{message.Date.ToLocalTime().ToShortTimeString()} {message.Username}: {message.Text}");
+            {
+                var messageParts = message.GetMessageParts();
+                var colors = messageParts.Item1;
+                var textParts = messageParts.Item2; 
 
+                for (var i = 0; i < colors.Length && i < textParts.Length; i++)
+                {
+                    Console.ForegroundColor = colors[i];
+                    Console.Write(textParts[i]);
+                }
+
+                Console.Write('\n');
+            }
+
+            Console.ForegroundColor = ConsoleColor.Blue;
             Console.Write(_currentPrompt);
+
+            Console.ForegroundColor = ConsoleColor.Green;
             Console.Write(_currentInput);
         }
 
         private static string GetInput(string prompt)
         {
-            Console.Write(prompt);
             _currentPrompt = prompt;
 
             ConsoleKeyInfo inputKey = new();
@@ -106,12 +120,7 @@
 
                 if (input.Any(char.IsWhiteSpace))
                 {
-                    AddMessage(
-                        new Message 
-                        { 
-                            Text = "Username can't have any whitespace. Try again.", 
-                            Username = "System" 
-                        });
+                    AddMessage(new ErrorMessage("Username can't have any whitespace. Try again."));
                     continue;
                 }
 

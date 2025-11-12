@@ -33,27 +33,29 @@ namespace ChatClient
             => await _client.DisconnectAsync();
 
         public static async Task SendMessage(Message message, string target)
-            => await _client.EmitAsync($"{_eventBase}_{target}_message", message);
+            => await _client.EmitAsync($"{_eventBase}_{target.ToLower()}_message", message);
 
         public static async Task JoinRoom(string room, string username)
         {
-            _client.On($"{_eventBase}_{room}_join", response 
+            var roomLowercase = room.ToLower();
+            _client.On($"{_eventBase}_{roomLowercase}_join", response 
                 => OnJoin(room, response));
-            _client.On($"{_eventBase}_{room}_leave", response 
+            _client.On($"{_eventBase}_{roomLowercase}_leave", response 
                 => OnLeave(room, response));
-            _client.On($"{_eventBase}_{room}_message", response 
+            _client.On($"{_eventBase}_{roomLowercase}_message", response 
                 => OnRoomMessage(room, response));
 
-            await _client.EmitAsync($"{_eventBase}_{room}_join", username);
+            await _client.EmitAsync($"{_eventBase}_{roomLowercase}_join", username);
         }
 
         public static async Task LeaveRoom(string room, string username)
         {
-            _client.Off($"{_eventBase}_{room}_join");
-            _client.Off($"{_eventBase}_{room}_leave");
-            _client.Off($"{_eventBase}_{room}_message");
+            var roomLowercase = room.ToLower();
+            _client.Off($"{_eventBase}_{roomLowercase}_join");
+            _client.Off($"{_eventBase}_{roomLowercase}_leave");
+            _client.Off($"{_eventBase}_{roomLowercase}_message");
 
-            await _client.EmitAsync($"{_eventBase}_{room}_leave", username); 
+            await _client.EmitAsync($"{_eventBase}_{roomLowercase}_leave", username); 
         }
 
         private static void OnRoomMessage(string room, SocketIOResponse response)

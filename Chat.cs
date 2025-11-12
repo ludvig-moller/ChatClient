@@ -1,21 +1,25 @@
-﻿namespace ChatClient
+﻿using ChatClient.Commands;
+
+namespace ChatClient
 {
     public static class Chat
     {
         private static bool _isRuinning = true;
         private static string _username = string.Empty;
-        private static string _currentRoom = "general";
+        private static string? _currentRoom = null;
+
         private static readonly List<Message> _messages = new();
 
         private static string _currentPrompt = string.Empty;
         private static string _currentInput = string.Empty;
 
+        public static string[] Rooms { get; } = ["General", "Study", "Comedy", "Game", "Music", "Movie", "Art"];
+
         public static async Task Start()
         {
-            _username = GetUsername();
+            _username = AskForUsername();
 
             await SocketManager.Connect(_username);
-            await SocketManager.JoinRoom(_currentRoom, _username);
             await Run();
         }
 
@@ -23,35 +27,92 @@
         {
             while (_isRuinning)
             {
-                var input = GetInput($"Message in {_currentRoom}: ");
+                string input = GetInput(_currentRoom != null
+                        ? $"Message in {_currentRoom}: "
+                        : "Command: "
+                    );
 
-                if (input == null)
-                    continue;
-
-                if (input == "/quit")
+                if (input[0] == '/')
                 {
-                    _isRuinning = false;
-                    await SocketManager.LeaveRoom(_currentRoom, _username);
-                    await SocketManager.Disconnect();
-                    break;
+                    await CommandManager.HandleCommand(input);
+                    continue;
                 }
 
                 if (_currentRoom == null)
                 {
-                    AddMessage(new ErrorMessage("Can't send messages without joining a room."));
+                    AddMessage(new ErrorMessage("Can't send messages without beeing in a room. Use the command /join <room>."));
                     continue;
                 }
 
                 var message = new RoomMessage(_currentRoom, _username, input);
-
+                
                 AddMessage(message);
                 await SocketManager.SendMessage(message, _currentRoom);
             }
         }
 
+        public static async Task Quit()
+        {
+            _isRuinning = false;
+
+            if (_currentRoom != null)
+                await SocketManager.LeaveRoom(_currentRoom, _username);
+
+            await SocketManager.Disconnect();
+        }
+
+        public static async Task JoinRoom(string room)
+        {
+            var foundRoom = false;
+            foreach (var availableRoom in Rooms)
+            {
+                if (availableRoom.Equals(room, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    room = availableRoom;
+                    foundRoom = true;
+                    break;
+                }
+            }
+
+            if (!foundRoom)
+            {
+                AddMessage(new ErrorMessage($"Room \"{room}\" dose not exist. Type /rooms to get the list of rooms."));
+                return;
+            }
+
+            if (_currentRoom != null)
+            {
+                await SocketManager.LeaveRoom(_currentRoom, _username);
+                AddMessage(new LeaveRoomMessage(_currentRoom, _username));
+            }
+
+            _currentRoom = room;
+            await SocketManager.JoinRoom(room, _username);
+            AddMessage(new JoinRoomMessage(_currentRoom, _username));
+        }
+
+        public static async Task LeaveRoom()
+        {
+            if (_currentRoom == null)
+            {
+                AddMessage(new ErrorMessage("Can't leave without beeing in a room."));
+                return;
+            }
+
+            await SocketManager.LeaveRoom(_currentRoom, _username);
+            AddMessage(new LeaveRoomMessage(_currentRoom, _username));
+            _currentRoom = null;
+        }
+
         public static void AddMessage(Message message)
         {
             _messages.Add(message);
+            OutputMessages();
+        }
+
+        public static void ClearMessages()
+        {
+            _messages.Clear();
             OutputMessages();
         }
 
@@ -81,36 +142,10 @@
             Console.Write(_currentInput);
         }
 
-        private static string GetInput(string prompt)
-        {
-            _currentPrompt = prompt;
+        public static string GetUsername()
+            => _username;
 
-            ConsoleKeyInfo inputKey = new();
-            while (inputKey.Key != ConsoleKey.Enter || _currentInput == string.Empty)
-            {
-                OutputMessages();
-
-                inputKey = Console.ReadKey();
-
-                if (inputKey.Key == ConsoleKey.Enter)
-                    continue;
-
-                if (inputKey.Key == ConsoleKey.Backspace)
-                    _currentInput = _currentInput.Length > 0 
-                        ? _currentInput.Remove(_currentInput.Length - 1) 
-                        : _currentInput;
-                else
-                    _currentInput += inputKey.KeyChar;
-            }
-
-            var newInput = _currentInput;
-            _currentInput = string.Empty;
-            _currentPrompt = string.Empty;
-
-            return newInput;
-        }
-
-        private static string GetUsername()
+        private static string AskForUsername()
         {
             string username = string.Empty;
 
@@ -127,6 +162,35 @@
                 username = input;
             }
             return username;
+        }
+
+        private static string GetInput(string prompt)
+        {
+            _currentPrompt = prompt;
+
+            ConsoleKeyInfo inputKey = new();
+            while (inputKey.Key != ConsoleKey.Enter || _currentInput == string.Empty)
+            {
+                OutputMessages();
+
+                inputKey = Console.ReadKey();
+
+                if (inputKey.Key == ConsoleKey.Enter)
+                    continue;
+
+                if (inputKey.Key == ConsoleKey.Backspace)
+                    _currentInput = _currentInput.Length > 0
+                        ? _currentInput.Remove(_currentInput.Length - 1)
+                        : _currentInput;
+                else
+                    _currentInput += inputKey.KeyChar;
+            }
+
+            var newInput = _currentInput;
+            _currentInput = string.Empty;
+            _currentPrompt = string.Empty;
+
+            return newInput;
         }
     }
 }

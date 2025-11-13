@@ -157,4 +157,64 @@
             return Task.CompletedTask;
         }
     }
+
+    public class IgnoreCommand : Command
+    {
+        public override string? ShortTrigger { get; } = "/i";
+        public override string[] Arguments { get; } = ["username"];
+        public override string Description { get; } = "Ignore a user to stop seeing thier messages.";
+
+        public override Task Execute(string[] args)
+        {
+            if (args.Length < 1)
+            {
+                Chat.AddMessage(new ErrorMessage("Command \"/ignore\" requires argument username."));
+                return Task.CompletedTask;
+            }
+
+            Chat.IgnoreUser(args[0]);
+            return Task.CompletedTask;
+        }
+    }
+
+    public class UnignoreCommand : Command
+    {
+        public override string? ShortTrigger { get; } = null;
+        public override string[] Arguments { get; } = ["username"];
+        public override string Description { get; } = "Unignores a previously ignored user.";
+
+        public override Task Execute(string[] args)
+        {
+            if (args.Length < 1)
+            {
+                Chat.AddMessage(new ErrorMessage("Command \"/unignore\" requires argument username."));
+                return Task.CompletedTask;
+            }
+
+            Chat.UnignoreUser(args[0]);
+            return Task.CompletedTask;
+        }
+    }
+
+    public class IgnoredCommand : Command
+    {
+        public override string? ShortTrigger { get; } = null;
+        public override string[] Arguments { get; } = [];
+        public override string Description { get; } = "Show a list of all your ignored users.";
+
+        public override Task Execute(string[] args)
+        {
+            string ignoredMessage = "Ignored: ";
+            for (var i = 0; i < Chat.IgnoredUsers.Count; i++)
+            {
+                ignoredMessage += Chat.IgnoredUsers[i];
+
+                if (i < Chat.IgnoredUsers.Count - 1)
+                    ignoredMessage += " - ";
+            }
+
+            Chat.AddMessage(new SystemMessage(ignoredMessage));
+            return Task.CompletedTask;
+        }
+    }
 }

@@ -14,6 +14,7 @@ namespace ChatClient
         private static string _currentInput = string.Empty;
 
         public static string[] Rooms { get; } = ["General", "Study", "Comedy", "Game", "Music", "Movie", "Art"];
+        public static List<string> IgnoredUsers { get; } = new();
 
         public static async Task Start()
         {
@@ -104,8 +105,39 @@ namespace ChatClient
             _currentRoom = null;
         }
 
+        public static void IgnoreUser(string username)
+        {
+            username = username.ToLower();
+
+            if (IgnoredUsers.Contains(username))
+            {
+                AddMessage(new ErrorMessage($"User \"{username}\" is already ignored."));
+                return;
+            }
+
+            IgnoredUsers.Add(username);
+            AddMessage(new SystemMessage($"User \"{username}\" has been ignored."));
+        }
+
+        public static void UnignoreUser(string username)
+        {
+            username = username.ToLower();
+
+            if (IgnoredUsers.Remove(username))
+            {
+                AddMessage(new SystemMessage($"User \"{username}\" has been unignored."));
+            }
+            else
+            {
+                AddMessage(new ErrorMessage($"User \"{username}\" was not found in the ignore list."));
+            }
+        }
+
         public static void AddMessage(Message message)
         {
+            if (IgnoredUsers.Contains(message.Sender.ToLower()))
+                return;
+
             _messages.Add(message);
             OutputMessages();
         }

@@ -18,6 +18,8 @@ namespace ChatClient
 
         public static async Task Start()
         {
+            AddMessage(new SystemMessage("Welcome to this chat start by entering your username!"));
+
             _username = AskForUsername();
 
             await SocketManager.Connect(_username);
@@ -26,6 +28,8 @@ namespace ChatClient
 
         private static async Task Run()
         {
+            AddMessage(new SystemMessage("Start by typing a command. If you need help /help shows all the commands."));
+
             while (_isRuinning)
             {
                 string input = GetInput(_currentRoom != null

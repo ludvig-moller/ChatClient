@@ -70,7 +70,7 @@
 
         public override async Task Execute(string[] args)
         {
-            if (args.Length < 1)
+            if (args.Length < 1 || args[0] == string.Empty)
             {
                 Chat.AddMessage(new ErrorMessage("Command \"/join\" requires argument room."));
                 return;
@@ -166,7 +166,7 @@
 
         public override Task Execute(string[] args)
         {
-            if (args.Length < 1)
+            if (args.Length < 1 || args[0] == string.Empty)
             {
                 Chat.AddMessage(new ErrorMessage("Command \"/ignore\" requires argument username."));
                 return Task.CompletedTask;
@@ -185,7 +185,7 @@
 
         public override Task Execute(string[] args)
         {
-            if (args.Length < 1)
+            if (args.Length < 1 || args[0] == string.Empty)
             {
                 Chat.AddMessage(new ErrorMessage("Command \"/unignore\" requires argument username."));
                 return Task.CompletedTask;

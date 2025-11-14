@@ -176,6 +176,8 @@ namespace ChatClient
 
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write(_currentInput);
+
+            Console.ResetColor();
         }
 
         public static string GetUsername()
